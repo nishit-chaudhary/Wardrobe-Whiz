@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chat_screen.dart';
+import 'add_cloth_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -42,6 +43,10 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
             ElevatedButton(
               onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AddClothScreen()),
+                );
                 // Add your logic for handling "Add Cloth" button press
                 // Navigate to the screen for adding cloth or perform related actions
               },
@@ -53,7 +58,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 // Navigate to the ChatScreen when the "Chat" button is pressed
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const ChatScreen()),
+                  MaterialPageRoute(builder: (context) => ChatScreen()),
                 );
               },
               child: const Text('Chat'),
