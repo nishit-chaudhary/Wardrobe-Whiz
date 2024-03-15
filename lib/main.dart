@@ -52,17 +52,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 // Add your logic for handling "Add Cloth" button press
                 // Navigate to the screen for adding cloth or perform related actions
               },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_circle_outline), // Hanger icon for "Add Cloth"
-                  SizedBox(width: 8), // Add spacing between icon and text
-                  Text(
-                    'Add Cloth',
-                    style: const TextStyle(fontSize: 22),
-                  ),
-                ],
-              ),
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.white, backgroundColor: Colors.blueAccent, // Button text color
                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24), // Button padding
@@ -72,6 +61,17 @@ class _MyHomePageState extends State<MyHomePage> {
                 elevation: 4, // Button shadow
                 fixedSize: Size(screenWidth * 0.8, screenWidth*0.2), // Set the minimum width of the button to 80% of the screen width
               ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_circle_outline), // Hanger icon for "Add Cloth"
+                  SizedBox(width: 8), // Add spacing between icon and text
+                  Text(
+                    'Add Cloth',
+                    style: TextStyle(fontSize: 22),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -79,10 +79,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 // Navigate to the ChatScreen when the "Chat" button is pressed
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ChatScreen()),
+                  MaterialPageRoute(builder: (context) => const ChatScreen()),
                 );
               },
-              child: Row(
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white, backgroundColor: Colors.greenAccent, // Button text color
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24), // Button padding
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20), // Decreased border radius
+                ),
+                elevation: 4, // Button shadow
+                fixedSize: Size(screenWidth * 0.8, screenWidth*0.2), // Set the minimum width of the button to 80% of the screen width
+              ),
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.message), // Message icon for "Chat"
@@ -92,15 +101,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     style: TextStyle(fontSize: 22),
                   ),
                 ],
-              ),
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.white, backgroundColor: Colors.greenAccent, // Button text color
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24), // Button padding
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20), // Decreased border radius
-                ),
-                elevation: 4, // Button shadow
-                fixedSize: Size(screenWidth * 0.8, screenWidth*0.2), // Set the minimum width of the button to 80% of the screen width
               ),
             ),
           ],
