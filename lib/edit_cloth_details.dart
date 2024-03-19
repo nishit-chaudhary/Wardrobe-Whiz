@@ -3,43 +3,47 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
 
-class ProcessedImageScreen extends StatelessWidget {
+class EditClothDetails extends StatelessWidget {
   dynamic image;
-  String category;
+  dynamic category;
   dynamic color;
   String details = "Additional Details";
   String imagePath;
+  dynamic initCat;
   dynamic _categoryController;
 
-  ProcessedImageScreen(
-      {required this.imagePath, required this.category, required this.color});
+  EditClothDetails(
+      {required this.imagePath,
+        required this.category,
+        required this.color,
+        required this.details});
 
   @override
   Widget build(BuildContext context) {
+
     image = File(imagePath);
+    initCat = category;
     _categoryController = TextEditingController(text: category);
     if (color == null) {
       color = Colors.green;
     }
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Processed Image'),
-      ),
-      body: Center(
+    return Dialog(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(50.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Image.file(
               image,
-              width: 250,
-              height: 250,
+              width: 200,
+              height: 200,
               fit: BoxFit.cover,
             ),
             Padding(
               padding: EdgeInsets.only(top: 25),
               child: Container(
-                width: 300,
+                width: 200,
                 child: TextField(
                   decoration: InputDecoration(
                     labelText: 'Cloth Category',
@@ -85,12 +89,9 @@ class ProcessedImageScreen extends StatelessWidget {
               child: Row(
                 // Place the color circle and button in a row
                 children: <Widget>[
-                  Padding(
-                    padding: EdgeInsets.only(left: 40),
-                    child: CircleAvatar(
-                      backgroundColor: color,
-                      radius: 16,
-                    ),
+                  CircleAvatar(
+                    backgroundColor: color,
+                    radius: 16,
                   ),
                   Padding(
                     padding: EdgeInsets.only(left: 20),
@@ -131,18 +132,32 @@ class ProcessedImageScreen extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: EdgeInsets.only(top: 25),
-              child: ElevatedButton(
-                  onPressed: () async {
-                    print(category);
-                    print(color);
-                    await storeClothDetails(
-                        imagePath, category, color, details);
-                    // Navigator.pop(context);
-                    // _addClothSuccessAlert(context);
-                    _addClothSuccessAlert(context);
-                  },
-                  child: Text('Save')),
+              padding: EdgeInsets.only(top: 20),
+              child: Row(
+                // Place the color circle and button in a row
+                children: <Widget>[
+                  ElevatedButton(
+                      onPressed: () async {
+                        print(category);
+                        print(color);
+                        await storeClothDetails(
+                            imagePath, category, color, details);
+
+                        _saveClothSuccessAlert(context);
+                      },
+                      child: Text('Save')),
+                  SizedBox(width: 10),
+                  ElevatedButton(
+                      onPressed: () async {
+                        print(category);
+                        print(color);
+                        await deleteCloth(imagePath, category, color, details);
+
+                        _deleteClothSuccessAlert(context);
+                      },
+                      child: Text('Delete')),
+                ],
+              ),
             ),
           ],
         ),
@@ -155,15 +170,11 @@ class ProcessedImageScreen extends StatelessWidget {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? clothesMapString = prefs.getString('savedClothes');
     String? categoryMap = prefs.getString('catMap');
-    String? index = prefs.getString("index");
-    String imgName = "image_";
-    int uni = 0;
 
     Map<String, dynamic> clothes;
     Map<String, dynamic> catMap;
-    if (clothesMapString != null && index != null && categoryMap != null) {
+    if (clothesMapString != null && categoryMap != null) {
       clothes = json.decode(clothesMapString);
-      uni = int.parse(index);
       catMap = json.decode(categoryMap);
     } else {
       clothes = {};
@@ -174,50 +185,116 @@ class ProcessedImageScreen extends StatelessWidget {
     Map<String, List<dynamic>> catMapDetails =
     Map<String, List<dynamic>>.from(catMap);
     List<String> clothInfo = [];
-    Directory appDir = await getApplicationDocumentsDirectory();
-    String appDirPath = appDir.path;
-    imgName = imgName + uni.toString();
-    uni += 1;
-    String newImagePath = '$appDirPath/savedImages/$category/$imgName.jpg';
-    Directory('$appDirPath/savedImages/$category').createSync(recursive: true);
 
-    File(imagePath).copySync(newImagePath);
     clothInfo.add(category);
     clothInfo.add(details);
     clothInfo
         .add(color.toString().replaceAll('Color(', '').replaceAll(')', ''));
-    clothDetails[newImagePath] = clothInfo;
+    clothDetails[imagePath] = clothInfo;
 
     if (!catMap.containsKey(category)) {
       List<String> cat = [];
       catMapDetails[category] = cat;
     }
 
-    catMapDetails.update(category, (value) {
-      value.add(newImagePath);
-      return value;
-    });
+    if (category != initCat) {
+      catMapDetails.update(initCat, (value) {
+        value.removeWhere((item) => item == imagePath);
+        return value;
+      });
+
+      catMapDetails.update(category, (value) {
+        value.add(imagePath);
+        return value;
+      });
+    }
 
     print(catMapDetails);
     print(clothDetails);
     await prefs.setString('savedClothes', json.encode(clothDetails));
-    await prefs.setString('index', uni.toString());
     await prefs.setString('catMap', json.encode(catMapDetails));
 
     print("Cloth Details Stored Successfully!!!");
   }
 
-  void _addClothSuccessAlert(BuildContext context) {
+  Future<void> deleteCloth(
+      String imagePath, String category, Color color, String details) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? clothesMapString = prefs.getString('savedClothes');
+    String? categoryMap = prefs.getString('catMap');
+
+    Map<String, dynamic> clothes;
+    Map<String, dynamic> catMap;
+    if (clothesMapString != null && categoryMap != null) {
+      clothes = json.decode(clothesMapString);
+      catMap = json.decode(categoryMap);
+    } else {
+      clothes = {};
+      catMap = {};
+    }
+    Map<String, List<dynamic>> clothDetails =
+    Map<String, List<dynamic>>.from(clothes);
+    Map<String, List<dynamic>> catMapDetails =
+    Map<String, List<dynamic>>.from(catMap);
+
+    if (!catMap.containsKey(category)) {
+      List<String> cat = [];
+      catMapDetails[category] = cat;
+    }
+
+    catMapDetails.update(initCat, (value) {
+      value.removeWhere((item) => item == imagePath);
+      return value;
+    });
+    clothDetails.remove(imagePath);
+
+    print(catMapDetails);
+    print(clothDetails);
+    await prefs.setString('savedClothes', json.encode(clothDetails));
+    await prefs.setString('catMap', json.encode(catMapDetails));
+
+
+    image.delete().then((_) {
+      print('Image file deleted successfully');
+    }).catchError((error) {
+      print('Error deleting image file: $error');
+    });
+    print("Cloth Deleted Successfully!!!");
+  }
+
+  void _saveClothSuccessAlert(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Add Cloth'),
+          title: Text('Update Cloth Details'),
           content: Text('Cloth Details saved Successfully !!!'),
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.popUntil(context, ModalRoute.withName('/'));
+                Navigator.popUntil(
+                    context, ModalRoute.withName('/viewWardrobe'));
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteClothSuccessAlert(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Cloth'),
+          content: Text('Cloth Deleted Successfully !!!'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.popUntil(
+                    context, ModalRoute.withName('/viewWardrobe'));
               },
               child: Text('OK'),
             ),

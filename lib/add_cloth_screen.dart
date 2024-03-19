@@ -48,37 +48,12 @@ class _AddClothScreenState extends State<AddClothScreen> {
       _loading = true;
     });
 
-    // Convert image to byte data
     print('Hello.....');
     final Uint8List byte = await _image.readAsBytes();
-    // ByteBuffer buffer = byteData.buffer;
 
-// Create a Uint8List view of the buffer
-//     final Uint8List byte = Uint8List.view(buffer);
-//     final Uint8List byte = await _image.readAsBytes();
-//     final Uint8List byte = byteData.buffer.asUint8List();
     print('Running Model.....');
-    // Perform inference with TensorFlow Lite model
-    // List? output = await Tflite.runModelOnBinary(
-    //   binary: uint8List,
-    //   asynch: true,
-    // );
 
-    // var recognitions = await Tflite.detectObjectOnImage(
-    //   path: _image.path,
-    //   model: "YOLO",
-    // );
 
-    // setState(() {
-    //   _recognitions = recognitions;
-    // });
-    //
-    // print(recognitions);
-    // ByteBuffer buffer = byteData.buffer;
-
-// Create a Uint8List view of the buffer
-//     Uint8List byte = Uint8List.view(buffer);
-//     Uint8List imgBytes = buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
     final result = await vision.yoloOnImage(
         bytesList: byte,
         imageHeight: _imageHeight,
@@ -90,23 +65,19 @@ class _AddClothScreenState extends State<AddClothScreen> {
     print(result);
     // print(result[0]["tag"]);
 
-
     // Parse output to get description
-    // Replace this with your actual parsing logic
-    // _description = 'This is a description of the processed image';
     if (result.isEmpty) {
       // Show alert
-
       _showEmptyResultsAlert(context);
     } else {
       _description = result[0]["tag"];
-      _result=result;
+      _result = result;
       await extractColorFromYOLOCoordinates();
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ProcessedImageScreen(
-              image: _image, description: _description, color: _clothColor),
+              imagePath: _imgPath, category: _description, color: _clothColor),
         ),
       );
     }
@@ -139,9 +110,7 @@ class _AddClothScreenState extends State<AddClothScreen> {
     });
   }
 
-  Future extractColorFromYOLOCoordinates()  async {
-    // Load the image
-    // final ImageProvider imageProvider = AssetImage(_imgPath);
+  Future extractColorFromYOLOCoordinates() async {
 
     // Define the YOLO coordinates (left, top, width, height)
     double left = _result[0]["box"][0]; // X-coordinate of the top-left corner
@@ -149,39 +118,29 @@ class _AddClothScreenState extends State<AddClothScreen> {
     double width = _result[0]["box"][2]; // Width of the region
     double height = _result[0]["box"][3];
     print(height.floor());
-    //  print(_imageHeight);
-    // if(width.floor()>_imageWidth)
-    //   {
-    //     width=_imageWidth-1;
-    //   }
-    // if(height.floor()>_imageHeight)
-    //   {
-    //     height=_imageHeight-1;
-    //   }
-    width=width/1.2;
-    height=height/1.2;
 
-    // dynamic left = double.arse('$_result[0]["box"][0].toStringAsFixed(2)'); // X-coordinate of the top-left corner
-    // dynamic top = double.tryParse('$_result[0]["box"][1].toStringAsFixed(2)'); // Y-coordinate of the top-left corner
-    // dynamic width = double.tryParse('$_result[0]["box"][2].toStringAsFixed(2)'); // Width of the region
-    // dynamic height = double.tryParse('$_result[0]["box"][3].toStringAsFixed(2)');// Height of the region
+    width = width / 1.2;
+    height = height / 1.2;
+
     print("defining region");
     // Define the region using the YOLO coordinates
     final Rect region = Rect.fromLTWH(left, top, width, height);
     print("Region Defined .... Extracting color");
     // Extract the dominant color from the specified region
-    // extractDominantColorFromRegion(imageProvider, region).then((Color color) {
-    final PaletteGenerator paletteGenerator = await PaletteGenerator.fromImageProvider(
+
+    final PaletteGenerator paletteGenerator =
+    await PaletteGenerator.fromImageProvider(
       FileImage(_image),
-      size: Size(_imageWidth+0.0,_imageHeight+0.0), // Specify image size if necessary
-      region:region, // Specify region if necessary
+      size: Size(_imageWidth + 0.0,
+          _imageHeight + 0.0), // Specify image size if necessary
+      region: region, // Specify region if necessary
     );
     Color color = paletteGenerator.dominantColor!.color;
     _clothColor = color;
 
     print('Dominant color in the region: $color');
-    // Use the extracted color as needed
-    // });
+
+
   }
 
   Future<Color> extractDominantColorFromRegion(
@@ -234,8 +193,6 @@ class _AddClothScreenState extends State<AddClothScreen> {
     );
   }
 }
-
-
 
 void _showEmptyResultsAlert(BuildContext context) {
   showDialog(
