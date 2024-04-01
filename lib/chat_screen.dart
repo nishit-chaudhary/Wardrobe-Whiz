@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:http/http.dart' as http;
 
-class ChatMessage {
+
+
+class ChatMessage
+{
+
   final String text;
   final bool isUser;
+
 
   ChatMessage({required this.text, required this.isUser});
 
@@ -26,6 +35,7 @@ class ChatMessage {
 class ChatScreen extends StatefulWidget {
   const ChatScreen({Key? key});
 
+
   @override
   _ChatScreenState createState() => _ChatScreenState();
 }
@@ -33,11 +43,56 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   List<ChatMessage> _messages = [];
+  dynamic _endpoint;
+  bool _isLoading = true; // Flag to control loading state
 
   @override
   void initState() {
     super.initState();
+    _loadEndpoint();
     _loadChatHistory();
+  }
+
+  Future<http.Response> sendQuery(String message) async {
+    final response = await http.post(
+      Uri.parse(_endpoint+"/chat"), // Replace api_endpoint with your API endpoint
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({"body":message}),
+    );
+    return response;
+  }
+
+  // Future<http.Response> sendQuery(String message) async {
+  //   final response = await http.get(
+  //     Uri.parse(_endpoint+"/chatbot").replace(queryParameters: {"body":message}),
+  //     // Replace api_endpoint with your API endpoint
+  //   );
+  //   return response;
+  // }
+
+  Future<void> _loadEndpoint() async
+  {
+    print("Connecting to database !!!");
+    try {
+      await Firebase.initializeApp(
+          options : DefaultFirebaseOptions.currentPlatform
+      );
+      print("Firebase Initialized Successfully");
+    } catch (e) {
+      print("Error initializing Firebase: $e");
+    }
+    final ref = FirebaseDatabase.instance.ref().child('api');
+    print("Getting Snapshot");
+    dynamic snapshot = await ref.get();
+    _endpoint=snapshot.value.toString();
+    print(snapshot.value.toString());
+
+    // Data fetched, set isLoading to false
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Future<void> _loadChatHistory() async {
@@ -54,16 +109,25 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _sendMessage(String message) async {
+
+    // Your code to send message and handle response goes here...
     setState(() {
+      _isLoading = true;
       // Add the user's message to the chat history
       _messages.add(ChatMessage(
         text: message,
         isUser: true,
       ));
+    });
 
-      // Simulate the chatbot's response (replace with actual chatbot response)
+    // Simulating API call delay
+    //   await Future.delayed(Duration(seconds: 2));
+    dynamic response = await sendQuery(message);
+    // Simulate the chatbot's response (replace with actual chatbot response)
+    setState(() {
+      _isLoading=false;
       _messages.add(ChatMessage(
-        text: "Thanks for your message!",
+        text: json.decode(response.body.toString())['messageResponse'],
         isUser: false,
       ));
     });
@@ -77,6 +141,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Clear the message text field
     _messageController.clear();
+    // Example code to simulate response from chatbot
+
+
+
+
   }
 
   @override
@@ -110,6 +179,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Expanded(
                   child: TextField(
                     controller: _messageController,
+                    enabled: !_isLoading, // Disable input field when loading
                     decoration: InputDecoration(
                       hintText: 'Type a message...',
                       border: OutlineInputBorder(
@@ -120,12 +190,19 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 IconButton(
                   icon: Icon(Icons.send),
-                  onPressed: () {
+                  onPressed: _isLoading // Disable button when loading
+                      ? null
+                      : () {
                     if (_messageController.text.isNotEmpty) {
                       _sendMessage(_messageController.text);
                     }
                   },
                 ),
+                if (_isLoading) // Show loading indicator if loading
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: CircularProgressIndicator(),
+                  ),
               ],
             ),
           ),
@@ -135,7 +212,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-class ChatBubble extends StatelessWidget {
+
+class ChatBubble extends StatelessWidget
+{
   final ChatMessage message;
 
   const ChatBubble({Key? key, required this.message}) : super(key: key);
