@@ -4,6 +4,11 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:http/http.dart' as http;
+import 'home_screen.dart';
 
 class ProcessedImageScreen extends StatelessWidget {
   dynamic image;
@@ -15,6 +20,27 @@ class ProcessedImageScreen extends StatelessWidget {
 
   ProcessedImageScreen(
       {required this.imagePath, required this.category, required this.color});
+
+  Future<void> _loadEndpoint() async {
+    print("Connecting to database !!!");
+    try {
+      await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform);
+      print("Firebase Initialized Successfully");
+    } catch (e) {
+      print("Error initializing Firebase: $e");
+    }
+    final ref = FirebaseDatabase.instance.ref().child('users');
+    print("Getting Snapshot");
+    dynamic snapshot = await ref.get();
+    // _endpoint = snapshot.value.toString();
+    print(snapshot.value.toString());
+    print(json.decode(snapshot.value.toString()));
+    // Data fetched, set isLoading to false
+    // setState(() {
+    //   _isLoading = false;
+    // });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +58,8 @@ class ProcessedImageScreen extends StatelessWidget {
           children: <Widget>[
             Image.file(
               image,
-              width: 250,
-              height: 250,
+              width: 200,
+              height: 200,
               fit: BoxFit.cover,
             ),
             Padding(
@@ -159,6 +185,9 @@ class ProcessedImageScreen extends StatelessWidget {
     String imgName = "image_";
     int uni = 0;
 
+    String? storedUsername = prefs.getString('username') ?? '';
+    String storedPassword = prefs.getString('password') ?? '';
+
     Map<String, dynamic> clothes;
     Map<String, dynamic> catMap;
     if (clothesMapString != null && index != null && categoryMap != null) {
@@ -204,6 +233,25 @@ class ProcessedImageScreen extends StatelessWidget {
     await prefs.setString('index', uni.toString());
     await prefs.setString('catMap', json.encode(catMapDetails));
 
+    print("Connecting to database !!!");
+    try {
+      await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform);
+      print("Firebase Initialized Successfully");
+    } catch (e) {
+      print("Error initializing Firebase: $e");
+    }
+    final ref = FirebaseDatabase.instance
+        .ref()
+        .child('users/' + storedUsername + '/' + storedPassword);
+    print("Getting Snapshot");
+    dynamic snapshot = await ref.get();
+    // print(snapshot.value.toString());
+    print(snapshot.value);
+    ref.update({"wardrobe": json.encode(clothDetails)});
+
+    // Data fetched, set isLoading to false
+
     print("Cloth Details Stored Successfully!!!");
   }
 
@@ -217,7 +265,7 @@ class ProcessedImageScreen extends StatelessWidget {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.popUntil(context, ModalRoute.withName('/'));
+                Navigator.popUntil(context, ModalRoute.withName('/home'));
               },
               child: Text('OK'),
             ),

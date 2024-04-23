@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class EditClothDetails extends StatelessWidget {
   dynamic image;
@@ -21,7 +24,6 @@ class EditClothDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     image = File(imagePath);
     initCat = category;
     _categoryController = TextEditingController(text: category);
@@ -214,6 +216,24 @@ class EditClothDetails extends StatelessWidget {
     await prefs.setString('savedClothes', json.encode(clothDetails));
     await prefs.setString('catMap', json.encode(catMapDetails));
 
+    String? storedUsername = prefs.getString('username') ?? '';
+    String storedPassword = prefs.getString('password') ?? '';
+    try {
+      await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform);
+      print("Firebase Initialized Successfully");
+    } catch (e) {
+      print("Error initializing Firebase: $e");
+    }
+    final ref = FirebaseDatabase.instance
+        .ref()
+        .child('users/' + storedUsername + '/' + storedPassword);
+    print("Getting Snapshot");
+    dynamic snapshot = await ref.get();
+    // print(snapshot.value.toString());
+    print(snapshot.value);
+    ref.update({"wardrobe": json.encode(clothDetails)});
+
     print("Cloth Details Stored Successfully!!!");
   }
 
@@ -253,12 +273,30 @@ class EditClothDetails extends StatelessWidget {
     await prefs.setString('savedClothes', json.encode(clothDetails));
     await prefs.setString('catMap', json.encode(catMapDetails));
 
-
     image.delete().then((_) {
       print('Image file deleted successfully');
     }).catchError((error) {
       print('Error deleting image file: $error');
     });
+
+    String? storedUsername = prefs.getString('username') ?? '';
+    String storedPassword = prefs.getString('password') ?? '';
+    try {
+      await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform);
+      print("Firebase Initialized Successfully");
+    } catch (e) {
+      print("Error initializing Firebase: $e");
+    }
+    final ref = FirebaseDatabase.instance
+        .ref()
+        .child('users/' + storedUsername + '/' + storedPassword);
+    print("Getting Snapshot");
+    dynamic snapshot = await ref.get();
+    // print(snapshot.value.toString());
+    print(snapshot.value);
+    ref.update({"wardrobe": json.encode(clothDetails)});
+
     print("Cloth Deleted Successfully!!!");
   }
 
