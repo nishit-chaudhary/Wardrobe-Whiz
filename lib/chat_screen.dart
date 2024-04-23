@@ -5,15 +5,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:http/http.dart' as http;
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-
-
-class ChatMessage
-{
-
+class ChatMessage {
   final String text;
   final bool isUser;
-
 
   ChatMessage({required this.text, required this.isUser});
 
@@ -35,32 +31,41 @@ class ChatMessage
 class ChatScreen extends StatefulWidget {
   const ChatScreen({Key? key});
 
-
   @override
   _ChatScreenState createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  stt.SpeechToText _speech = stt.SpeechToText();
   final TextEditingController _messageController = TextEditingController();
   List<ChatMessage> _messages = [];
   dynamic _endpoint;
   bool _isLoading = true; // Flag to control loading state
-
+  bool _isListening = false;
   @override
   void initState() {
     super.initState();
     _loadEndpoint();
     _loadChatHistory();
+    _initializeSpeech();
+  }
+
+  void _initializeSpeech() async {
+    bool isAvailable = await _speech.initialize();
+    if (!isAvailable) {
+      print('Speech recognition not available');
+    }
   }
 
   Future<http.Response> sendQuery(String message) async {
     final response = await http.post(
-      Uri.parse(_endpoint+"/chat"), // Replace api_endpoint with your API endpoint
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode({"body":message}),
-    );
+        Uri.parse(
+            _endpoint + "/chat"), // Replace api_endpoint with your API endpoint
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode({"body": message})
+    ).timeout(Duration(seconds: 30));
     return response;
   }
 
@@ -72,13 +77,11 @@ class _ChatScreenState extends State<ChatScreen> {
   //   return response;
   // }
 
-  Future<void> _loadEndpoint() async
-  {
+  Future<void> _loadEndpoint() async {
     print("Connecting to database !!!");
     try {
       await Firebase.initializeApp(
-          options : DefaultFirebaseOptions.currentPlatform
-      );
+          options: DefaultFirebaseOptions.currentPlatform);
       print("Firebase Initialized Successfully");
     } catch (e) {
       print("Error initializing Firebase: $e");
@@ -86,7 +89,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final ref = FirebaseDatabase.instance.ref().child('api');
     print("Getting Snapshot");
     dynamic snapshot = await ref.get();
-    _endpoint=snapshot.value.toString();
+    _endpoint = snapshot.value.toString();
     print(snapshot.value.toString());
 
     // Data fetched, set isLoading to false
@@ -109,7 +112,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _sendMessage(String message) async {
-
     // Your code to send message and handle response goes here...
     setState(() {
       _isLoading = true;
@@ -125,9 +127,10 @@ class _ChatScreenState extends State<ChatScreen> {
     dynamic response = await sendQuery(message);
     // Simulate the chatbot's response (replace with actual chatbot response)
     setState(() {
-      _isLoading=false;
+      _isLoading = false;
+      print(response.body.toString());
       _messages.add(ChatMessage(
-        text: json.decode(response.body.toString())['messageResponse'],
+        text: json.decode(response.body.toString())['response'],
         isUser: false,
       ));
     });
@@ -142,10 +145,6 @@ class _ChatScreenState extends State<ChatScreen> {
     // Clear the message text field
     _messageController.clear();
     // Example code to simulate response from chatbot
-
-
-
-
   }
 
   @override
@@ -189,6 +188,32 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 IconButton(
+                  icon: Icon(!_isListening ? Icons.mic_off : Icons.mic),
+                  onPressed: _isLoading // Disable button when loading
+                      ? null
+                      : () {
+                    setState(() {
+                      _isListening = !_isListening;
+                    });
+                    if (_isListening) {
+                      _speech.listen(
+                        onResult: (result) {
+                          setState(() {
+                            _messageController.text =
+                                result.recognizedWords;
+
+                          });
+                        },
+                      );
+                    } else {
+                      _speech.stop();
+                      if (_messageController.text.isNotEmpty) {
+                        _sendMessage(_messageController.text);
+                      }
+                    }
+                  },
+                ),
+                IconButton(
                   icon: Icon(Icons.send),
                   onPressed: _isLoading // Disable button when loading
                       ? null
@@ -198,6 +223,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     }
                   },
                 ),
+
                 if (_isLoading) // Show loading indicator if loading
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -212,9 +238,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-
-class ChatBubble extends StatelessWidget
-{
+class ChatBubble extends StatelessWidget {
   final ChatMessage message;
 
   const ChatBubble({Key? key, required this.message}) : super(key: key);

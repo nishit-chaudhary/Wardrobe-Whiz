@@ -38,6 +38,8 @@ dependencies:
   shared_preferences: ^2.0.8
   palette_generator:
   flutter_colorpicker:
+  speech_to_text:
+  provider:
 
 
 
