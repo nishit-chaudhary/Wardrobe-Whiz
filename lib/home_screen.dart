@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'chat_screen.dart';
 import 'add_cloth_screen.dart';
-import 'view_wardrobe.dart';
+import 'side_menu.dart';
 
 // void main() {
 //   runApp(const MyApp());
@@ -42,6 +42,7 @@ class _MyHomePageState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
+      drawer:SideMenu(),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

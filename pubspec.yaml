@@ -31,7 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   camera: ^0.10.5
-  flutter_vision: ^1.1.4
+  #  flutter_vision: ^1.1.4
   permission_handler: ^11.0.1
   flutter_tts: ^3.8.2
   image_picker:
@@ -40,6 +40,10 @@ dependencies:
   flutter_colorpicker:
   speech_to_text:
   provider:
+  geolocator:
+  path_provider:
+  #  flutter_pytorch:
+
 
 
 

@@ -232,8 +232,19 @@ class _SignUpPageState extends State<SignUpScreen> {
       await prefs.setString('username', email);
       await prefs.setString('password', pass);
       await prefs.setBool('isLoggedIn', true);
+      await prefs.setString('userInfo',json.encode({
+        "fname": _firstNameController.text,
+        "lname": _lastNameController.text,
+        "age": _ageController.text,
+        "gender": _selectedGender,
+        "email": _emailController.text
+      }));
 
-      Navigator.pushNamed(context, '/home');
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/home',
+            (route) => false, // This removes all previous routes
+      );
     } else {
       _userExitsAlert(context);
     }

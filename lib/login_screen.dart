@@ -18,16 +18,24 @@ class _LoginScreenState extends State<LoginScreen> {
     _checkLogin();
   }
 
+
+
   void _checkLogin() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('isLoggedIn') ?? false) {
-      Navigator.pushNamed(context, '/home');
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/home',
+            (route) => false, // This removes all previous routes
+      );
     }
   }
 
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+
 
   Future<void> _login() async {
     if (_formKey.currentState?.validate() ?? false) {
@@ -55,13 +63,21 @@ class _LoginScreenState extends State<LoginScreen> {
       final ref =
       FirebaseDatabase.instance.ref().child('users/' + email + '/' + pass);
       var check = await ref.get();
-
+      print(check.value);
+      dynamic x=check.value;
       if (check.exists) {
+
 
         await prefs.setString('username', email);
         await prefs.setString('password', pass);
         await prefs.setBool('isLoggedIn', true);
-        Navigator.pushNamed(context, '/home');
+        await prefs.setString('userInfo',json.encode(check.value));
+        _checkLogin();
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/home',
+              (route) => false, // This removes all previous routes
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Invalid username or password")),
@@ -81,6 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _checkLogin();
     return Scaffold(
       appBar: AppBar(
         title: Text("Login"),

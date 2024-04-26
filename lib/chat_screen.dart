@@ -6,25 +6,28 @@ import 'firebase_options.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:http/http.dart' as http;
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:geolocator/geolocator.dart';
+import 'dart:io';
 
 class ChatMessage {
   final String text;
+  final List<dynamic> clothes;
   final bool isUser;
 
-  ChatMessage({required this.text, required this.isUser});
+  ChatMessage(
+      {required this.text, required this.isUser, required this.clothes});
 
   Map<String, dynamic> toJson() {
     return {
       'text': text,
       'isUser': isUser,
+      'clothes': clothes,
     };
   }
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
-      text: json['text'],
-      isUser: json['isUser'],
-    );
+        text: json['text'], isUser: json['isUser'], clothes: json['clothes']);
   }
 }
 
@@ -36,6 +39,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  List<List<String>> _clothes = [];
+  String forecast = "";
+  bool _showimage = false;
   stt.SpeechToText _speech = stt.SpeechToText();
   final TextEditingController _messageController = TextEditingController();
   List<ChatMessage> _messages = [];
@@ -48,6 +54,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _loadEndpoint();
     _loadChatHistory();
     _initializeSpeech();
+    _getForecast();
   }
 
   void _initializeSpeech() async {
@@ -57,25 +64,22 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<http.Response> sendQuery(String message) async {
-    final response = await http.post(
-        Uri.parse(
-            _endpoint + "/chat"), // Replace api_endpoint with your API endpoint
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode({"body": message})
-    ).timeout(Duration(seconds: 30));
+  Future<http.Response> sendQuery(
+      String message, String user, String pass) async {
+    final response = await http
+        .post(
+            Uri.parse(_endpoint +
+                "/chat"), // Replace api_endpoint with your API endpoint
+            headers: <String, String>{
+              'Content-Type': 'application/json; charset=UTF-8',
+            },
+            body: jsonEncode({
+              "body":
+                  json.encode({"message": message, "user": user, "pass": pass})
+            }))
+        .timeout(Duration(seconds: 30));
     return response;
   }
-
-  // Future<http.Response> sendQuery(String message) async {
-  //   final response = await http.get(
-  //     Uri.parse(_endpoint+"/chatbot").replace(queryParameters: {"body":message}),
-  //     // Replace api_endpoint with your API endpoint
-  //   );
-  //   return response;
-  // }
 
   Future<void> _loadEndpoint() async {
     print("Connecting to database !!!");
@@ -112,31 +116,38 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _sendMessage(String message) async {
+    List<String> clothes = [];
+    _showimage = true;
     // Your code to send message and handle response goes here...
     setState(() {
       _isLoading = true;
       // Add the user's message to the chat history
       _messages.add(ChatMessage(
         text: message,
+        clothes: clothes,
         isUser: true,
       ));
     });
 
     // Simulating API call delay
     //   await Future.delayed(Duration(seconds: 2));
-    dynamic response = await sendQuery(message);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? username = prefs.getString('username') ?? '';
+    String password = prefs.getString('password') ?? '';
+    dynamic response = await sendQuery(message + forecast, username, password);
+
+    clothes = List<String>.from(
+        json.decode(response.body.toString())['response'] as List);
     // Simulate the chatbot's response (replace with actual chatbot response)
     setState(() {
       _isLoading = false;
       print(response.body.toString());
       _messages.add(ChatMessage(
-        text: json.decode(response.body.toString())['response'],
-        isUser: false,
-      ));
+          text: "Recommended clothes :", isUser: false, clothes: clothes));
     });
 
     // Save the updated chat history to SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+
     prefs.setStringList(
       'chat_history',
       _messages.map((message) => jsonEncode(message.toJson())).toList(),
@@ -147,10 +158,79 @@ class _ChatScreenState extends State<ChatScreen> {
     // Example code to simulate response from chatbot
   }
 
+  Future<Position> _getLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    dynamic loc = await Geolocator.getCurrentPosition();
+    print("Getting Location!!");
+    print(loc);
+    return loc;
+  }
+
+  Future<http.Response> getWeather(String message) async {
+    final response = await http.get(
+      Uri.parse(
+          "http://api.weatherapi.com/v1/current.json?key=f2316321459d48e2a5c34518242404&q=" +
+              message +
+              "Bangalore&aqi=no"),
+      // Replace api_endpoint with your API endpoint
+    );
+    return response;
+  }
+
+  void _getForecast() async {
+    Position position = await _getLocation();
+    final response = await getWeather(
+        position.latitude.toString() + "," + position.longitude.toString());
+    dynamic x = json.decode(response.body.toString());
+    print(x);
+    String f = x["current"]["condition"]["text"];
+    String p = "precipitation:" +
+        x["current"]["precip_mm"].toString() +
+        "huidity:" +
+        x["current"]["humidity"].toString();
+    // forecast="Weather forecast : "+f+" "+p;
+    forecast = "Weather forecast : " + f;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete),
+            onPressed: () async {
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              await prefs.setStringList('chat_history', []);
+              setState(() {
+                _messages = [];
+              });
+              // Handle button tap, navigate, or perform an action
+              print('delete button tapped');
+            },
+          ),
+        ],
         title: const Text('Chat with Assistant'),
       ),
       body: Column(
@@ -160,14 +240,15 @@ class _ChatScreenState extends State<ChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 4.0,
-                    horizontal: 8.0,
-                  ),
-                  child: ChatBubble(
-                    message: _messages[index],
-                  ),
-                );
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 4.0,
+                      horizontal: 8.0,
+                    ),
+                    child: Column(children: <Widget>[
+                      ChatBubble(
+                        message: _messages[index],
+                      ),
+                    ]));
               },
             ),
           ),
@@ -192,38 +273,36 @@ class _ChatScreenState extends State<ChatScreen> {
                   onPressed: _isLoading // Disable button when loading
                       ? null
                       : () {
-                    setState(() {
-                      _isListening = !_isListening;
-                    });
-                    if (_isListening) {
-                      _speech.listen(
-                        onResult: (result) {
                           setState(() {
-                            _messageController.text =
-                                result.recognizedWords;
-
+                            _isListening = !_isListening;
                           });
+                          if (_isListening) {
+                            _speech.listen(
+                              onResult: (result) {
+                                setState(() {
+                                  _messageController.text =
+                                      result.recognizedWords;
+                                });
+                              },
+                            );
+                          } else {
+                            _speech.stop();
+                            if (_messageController.text.isNotEmpty) {
+                              _sendMessage(_messageController.text);
+                            }
+                          }
                         },
-                      );
-                    } else {
-                      _speech.stop();
-                      if (_messageController.text.isNotEmpty) {
-                        _sendMessage(_messageController.text);
-                      }
-                    }
-                  },
                 ),
                 IconButton(
                   icon: Icon(Icons.send),
                   onPressed: _isLoading // Disable button when loading
                       ? null
                       : () {
-                    if (_messageController.text.isNotEmpty) {
-                      _sendMessage(_messageController.text);
-                    }
-                  },
+                          if (_messageController.text.isNotEmpty) {
+                            _sendMessage(_messageController.text);
+                          }
+                        },
                 ),
-
                 if (_isLoading) // Show loading indicator if loading
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -254,10 +333,36 @@ class ChatBubble extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(12.0),
         margin: const EdgeInsets.symmetric(vertical: 4.0),
-        child: Text(
-          message.text,
-          style: TextStyle(fontSize: 16.0),
-        ),
+        child: Column(children: <Widget>[
+          Text(
+            message.text,
+            style: TextStyle(fontSize: 16.0),
+          ),
+          GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            itemCount: message.clothes.length,
+            itemBuilder: (context, i) {
+              String imagePath = message.clothes[i];
+
+              return GestureDetector(
+                child: Card(
+                  child: Image.file(
+                    File(
+                        "/data/user/0/com.example.wardrobe_whiz/app_flutter/savedImages/" +
+                            imagePath),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              );
+            },
+          ),
+        ]),
       ),
     );
   }
