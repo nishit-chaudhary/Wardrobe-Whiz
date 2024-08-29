@@ -1,7 +1,7 @@
 # Wardrobe-Whiz
 
-A personalized outfit recommendation system. User can click photos which are automatically classified based on type and stored in database.
-Chatbot is implemented to recommend clothes towear based on user query and weather condition.
+A personalized outfit recommendation system. User can click photos of clothes which are automatically classified based on type and stored in database.
+Chatbot is implemented to recommend clothing outfits based on user query and weather conditions.
 
 ## ResNet - 34 Training
 
