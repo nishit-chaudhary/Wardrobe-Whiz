@@ -1,15 +1,14 @@
-# wardrobe_whiz
+# Wardrobe-Whiz
 
-A personalized outfit recommendation system.
+A personalized outfit recommendation system. User can click photos which are automatically classified based on type and stored in database.
+Chatbot is implemented to recommend clothes towear based on user query and weather condition.
 
-## Getting Started
+## ResNet - 34 Training
 
-This project is a starting point for a Flutter application.
+- [Resnet Training Notebook ](https://colab.research.google.com/drive/1ppbmiK5Ad0F8EBXEayFyJM6c5MbPaKLM?usp=sharing&authuser=3#scrollTo=b4GJyUXZbbB-)
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Mistral-7B + LLM :
+- [LLM Notebook]([https://docs.flutter.dev/cookbook](https://colab.research.google.com/drive/1JEEj-dSp1ZiHY-M0T2YG1qKV7EjEfaff?usp=sharing))
 
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
